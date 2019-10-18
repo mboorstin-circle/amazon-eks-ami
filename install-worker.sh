@@ -52,17 +52,19 @@ sudo yum update -y
 
 # Install necessary packages
 sudo yum install -y \
-    aws-cfn-bootstrap \
-    awscli \
+    iptables-services \
     chrony \
     conntrack \
     curl \
     jq \
-    ec2-instance-connect \
     nfs-utils \
     socat \
     unzip \
-    wget
+    wget \
+    python27
+
+pip2 install awscli ec2instanceconnectcli --upgrade --user
+pip2 install https://s3.amazonaws.com/cloudformation-examples/aws-cfn-bootstrap-latest.tar.gz --upgrade --user
 
 ################################################################################
 ### Time #######################################################################
@@ -96,6 +98,7 @@ sudo bash -c "/sbin/iptables-save > /etc/sysconfig/iptables"
 sudo mv $TEMPLATE_DIR/iptables-restore.service /etc/systemd/system/iptables-restore.service
 
 sudo systemctl daemon-reload
+sudo systemctl enable iptables
 sudo systemctl enable iptables-restore
 
 ################################################################################
@@ -106,12 +109,15 @@ sudo yum install -y yum-utils device-mapper-persistent-data lvm2
 
 INSTALL_DOCKER="${INSTALL_DOCKER:-true}"
 if [[ "$INSTALL_DOCKER" == "true" ]]; then
-    sudo amazon-linux-extras enable docker
-    sudo yum install -y docker-${DOCKER_VERSION}*
+    if [ "$MACHINE" == "x86_64" ]; then
+        sudo yum install -y https://download.docker.com/linux/centos/7/x86_64/stable/Packages/docker-ce-18.06.3.ce-3.el7.x86_64.rpm
+    elif [ "$MACHINE" == "aarch64" ]; then
+        sudo yum install -y https://download.docker.com/linux/centos/7/aarch64/stable/Packages/docker-ce-18.06.3.ce-3.el7.aarch64.rpm
+    fi
     sudo usermod -aG docker $USER
 
     # Remove all options from sysconfig docker.
-    sudo sed -i '/OPTIONS/d' /etc/sysconfig/docker
+    # sudo sed -i '/OPTIONS/d' /etc/sysconfig/docker
 
     sudo mkdir -p /etc/docker
     sudo mv $TEMPLATE_DIR/docker-daemon.json /etc/docker/daemon.json
