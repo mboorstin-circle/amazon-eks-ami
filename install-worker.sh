@@ -63,8 +63,11 @@ sudo yum install -y \
     wget \
     python27
 
-pip2 install awscli ec2instanceconnectcli --upgrade --user
-pip2 install https://s3.amazonaws.com/cloudformation-examples/aws-cfn-bootstrap-latest.tar.gz --upgrade --user
+sudo ln -s /usr/bin/python2 /usr/bin/python
+sudo ln -s /usr/bin/pip2 /usr/bin/pip
+pip install awscli ec2instanceconnectcli --upgrade --user
+pip install https://s3.amazonaws.com/cloudformation-examples/aws-cfn-bootstrap-latest.tar.gz --upgrade --user
+sudo ln -s /home/ec2-user/.local/bin/cfn-hup /etc/init.d/cfn-hup
 
 ################################################################################
 ### Time #######################################################################
