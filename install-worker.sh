@@ -65,9 +65,17 @@ sudo yum install -y \
 
 sudo ln -s /usr/bin/python2 /usr/bin/python
 sudo ln -s /usr/bin/pip2 /usr/bin/pip
-pip install awscli ec2instanceconnectcli --upgrade --user
-pip install https://s3.amazonaws.com/cloudformation-examples/aws-cfn-bootstrap-latest.tar.gz --upgrade --user
-sudo ln -s /home/ec2-user/.local/bin/cfn-hup /etc/init.d/cfn-hup
+sudo pip install awscli ec2instanceconnectcli --upgrade
+sudo pip install awscli https://s3.amazonaws.com/cloudformation-examples/aws-cfn-bootstrap-latest.tar.gz
+sudo ln -s /usr/bin/cfn-hup /etc/init.d/cfn-hup
+sudo mkdir -p /opt/aws/bin
+sudo ln -s /usr/bin/cfn-elect-cmd-leader /opt/aws/bin/cfn-elect-cmd-leader
+sudo ln -s /usr/bin/cfn-get-metadata /opt/aws/bin/cfn-get-metadata
+sudo ln -s /usr/bin/cfn-hup /opt/aws/bin/cfn-hup
+sudo ln -s /usr/bin/cfn-init /opt/aws/bin/cfn-init
+sudo ln -s /usr/bin/cfn-send-cmd-event /opt/aws/bin/cfn-send-cmd-event
+sudo ln -s /usr/bin/cfn-send-cmd-result /opt/aws/bin/cfn-send-cmd-result
+sudo ln -s /usr/bin/cfn-signal /opt/aws/bin/cfn-signal
 
 ################################################################################
 ### Time #######################################################################
@@ -236,6 +244,10 @@ sudo chown root:root /etc/eks/*
 ################################################################################
 ### Cleanup ####################################################################
 ################################################################################
+
+# Disable selinux
+sudo setenforce 0
+sudo sed -i'' 's/SELINUX=enforcing/SELINUX=disable/g' /etc/selinux/config
 
 # Clean up yum caches to reduce the image size
 sudo yum clean all
