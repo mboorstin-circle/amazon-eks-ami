@@ -462,7 +462,7 @@ Resources:
     Properties:
       AssociatePublicIpAddress: "true"
       BlockDeviceMappings:
-        - DeviceName: /dev/xvda
+        - DeviceName: xvda
           Ebs:
             DeleteOnTermination: true
             VolumeSize: !Ref NodeVolumeSize

@@ -47,26 +47,22 @@ fi
 ### Packages ###################################################################
 ################################################################################
 
-# Update the OS to begin with to catch up to the latest packages.
-sudo yum update -y
-
-# Install necessary packages
-sudo yum install -y \
-    iptables-services \
-    chrony \
+sudo apt update
+sudo apt install -y software-properties-common
+sudo add-apt-repository "deb http://deb.debian.org/debian stretch-backports main"
+sudo apt update
+sudo apt install -y \
+    linux-image-4.19.0-0.bpo.6-amd64 \
+    iptables \
     conntrack \
     curl \
     jq \
-    nfs-utils \
+    nfs-common \
     socat \
     unzip \
     wget \
-    python27
-
-sudo ln -s /usr/bin/python2 /usr/bin/python
-sudo ln -s /usr/bin/pip2 /usr/bin/pip
-sudo pip install awscli ec2instanceconnectcli --upgrade
-sudo pip install https://s3.amazonaws.com/cloudformation-examples/aws-cfn-bootstrap-latest.tar.gz
+    python-pip
+sudo pip install awscli ec2instanceconnectcli https://s3.amazonaws.com/cloudformation-examples/aws-cfn-bootstrap-latest.tar.gz --upgrade
 sudo ln -s /usr/bin/cfn-hup /etc/init.d/cfn-hup
 sudo mkdir -p /opt/aws/bin
 sudo ln -s /usr/bin/cfn-elect-cmd-leader /opt/aws/bin/cfn-elect-cmd-leader
@@ -82,10 +78,10 @@ sudo ln -s /usr/bin/cfn-signal /opt/aws/bin/cfn-signal
 ################################################################################
 
 # Make sure Amazon Time Sync Service starts on boot.
-sudo chkconfig chronyd on
+# sudo chkconfig chronyd on
 
 # Make sure that chronyd syncs RTC clock to the kernel.
-cat <<EOF | sudo tee -a /etc/chrony.conf
+cat <<EOF | sudo tee -a /etc/chrony/chrony.conf
 # This directive enables kernel synchronisation (every 11 minutes) of the
 # real-time clock. Note that it can’t be used along with the 'rtcfile' directive.
 rtcsync
@@ -104,27 +100,32 @@ fi
 ################################################################################
 
 # Enable forwarding via iptables
-sudo bash -c "/sbin/iptables-save > /etc/sysconfig/iptables"
+sudo bash -c "/sbin/iptables-save > /etc/iptables.up.rules"
 
 sudo mv $TEMPLATE_DIR/iptables-restore.service /etc/systemd/system/iptables-restore.service
 
 sudo systemctl daemon-reload
-sudo systemctl enable iptables
 sudo systemctl enable iptables-restore
 
 ################################################################################
 ### Docker #####################################################################
 ################################################################################
 
-sudo yum install -y yum-utils device-mapper-persistent-data lvm2
-
 INSTALL_DOCKER="${INSTALL_DOCKER:-true}"
 if [[ "$INSTALL_DOCKER" == "true" ]]; then
+    curl -fsSL https://download.docker.com/linux/debian/gpg | sudo apt-key add -
     if [ "$MACHINE" == "x86_64" ]; then
-        sudo yum install -y https://download.docker.com/linux/centos/7/x86_64/stable/Packages/docker-ce-18.06.3.ce-3.el7.x86_64.rpm
+        sudo add-apt-repository \
+            "deb [arch=amd64] https://download.docker.com/linux/debian \
+            $(lsb_release -cs) \
+            stable"
     elif [ "$MACHINE" == "aarch64" ]; then
-        sudo yum install -y https://download.docker.com/linux/centos/7/aarch64/stable/Packages/docker-ce-18.06.3.ce-3.el7.aarch64.rpm
+        echo "deb [arch=armhf] https://download.docker.com/linux/debian \
+            $(lsb_release -cs) stable" | \
+            sudo tee /etc/apt/sources.list.d/docker.list
     fi
+    sudo apt update
+    sudo apt install -y docker-ce=18.06.3~ce~3-0~debian
     sudo usermod -aG docker $USER
 
     # Remove all options from sysconfig docker.
@@ -245,15 +246,10 @@ sudo chown root:root /etc/eks/*
 ### Cleanup ####################################################################
 ################################################################################
 
-# Disable selinux
-sudo setenforce 0
-sudo sed -i'' 's/SELINUX=enforcing/SELINUX=disable/g' /etc/selinux/config
-
 # Clean up yum caches to reduce the image size
-sudo yum clean all
-sudo rm -rf \
-    $TEMPLATE_DIR  \
-    /var/cache/yum
+sudo apt autoremove
+sudo apt clean
+sudo rm -rf $TEMPLATE_DIR
 
 # Clean up files to reduce confusion during debug
 sudo rm -rf \
@@ -261,7 +257,7 @@ sudo rm -rf \
     /etc/machine-id \
     /etc/resolv.conf \
     /etc/ssh/ssh_host* \
-    /home/ec2-user/.ssh/authorized_keys \
+    /home/admin/.ssh/authorized_keys \
     /root/.ssh/authorized_keys \
     /var/lib/cloud/data \
     /var/lib/cloud/instance \
@@ -269,7 +265,6 @@ sudo rm -rf \
     /var/lib/cloud/sem \
     /var/lib/dhclient/* \
     /var/lib/dhcp/dhclient.* \
-    /var/lib/yum/history \
     /var/log/cloud-init-output.log \
     /var/log/cloud-init.log \
     /var/log/secure \
